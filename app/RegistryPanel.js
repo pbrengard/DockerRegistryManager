@@ -52,11 +52,10 @@ class RegistryPanel extends React.Component {
         if (responseJson.result === "success") {
           let changed_state = {repositories: this.state.repositories};
           let repoi = changed_state.repositories.map(e => e.name).indexOf(repo);
-          console.log(this);
-          console.log(this.state.repositories);
-          console.log(repoi);
-          changed_state.repositories[repoi].tags = changed_state.repositories[repoi].tags.filter(item => item !== tag);
-          this.setState(changed_state);
+          if (repoi != -1) {
+            changed_state.repositories[repoi].tags = changed_state.repositories[repoi].tags.filter(item => item !== tag);
+            this.setState(changed_state);
+          }
         }
       })
       .catch((error) => {

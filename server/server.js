@@ -7,6 +7,8 @@ const webpack = require('webpack');
 const webpackMiddleware = require('webpack-dev-middleware');
 const webpackHotMiddleware = require('webpack-hot-middleware');
 const async = require('async');
+const { exec } = require('child_process');
+const util = require('util');
 
 const isDeveloping = process.env.NODE_ENV !== 'production';
 const port = process.env.PORT || 3000;
@@ -45,30 +47,28 @@ if (isDeveloping) {
 
 
 
-function getDetailsUrl(url) {
-  return function getDetails(repo, next) {
-    request({
-      uri: url+"/v2/"+repo+"/tags/list",
-      method: "GET",
-      timeout: 10000,
-      followRedirect: true,
-      maxRedirects: 10,
-      json: true,
-      headers: {
-        Accept: 'application/vnd.docker.distribution.manifest.v2+json'
-      }
-    }, function(error, response, body) {
-      if (error) {
-        next(error);
-      } else {
-        next(null, body);
-      }
-    });
-  };
-}
+
+getDetails = (url) => (repo, next) => {
+  request({
+    uri: url+"/v2/"+repo+"/tags/list",
+    method: "GET",
+    timeout: 10000,
+    followRedirect: true,
+    maxRedirects: 10,
+    json: true,
+    headers: {
+      Accept: 'application/vnd.docker.distribution.manifest.v2+json'
+    }
+  }, function(error, response, body) {
+    if (error) {
+      next(error);
+    } else {
+      next(null, body);
+    }
+  });
+};
 
 app.get("/catalog", function response(req, res) {
-  
   request({
     uri: req.query.url+"/v2/_catalog",
     method: "GET",
@@ -83,11 +83,11 @@ app.get("/catalog", function response(req, res) {
     if (error) {
       res.send(error);
     } else {
-      async.map(body.repositories, getDetailsUrl(req.query.url), function(err, results) {
+      async.map(body.repositories, getDetails(req.query.url), function(err, results) {
         if (err) {
           res.send(err);
         } else {
-          console.log(results);
+          //console.log(results);
           res.send({repositories: results});
         }
       });
@@ -95,14 +95,14 @@ app.get("/catalog", function response(req, res) {
   });
 });
 
-function getDigest(registry_url, repo, tag, next) {
+getDigest = (registry_url, repo) => (tag, next) => {
   request({
     uri: registry_url+"/v2/"+repo+"/manifests/"+tag,
     method: "GET",
     timeout: 10000,
     followRedirect: true,
     maxRedirects: 10,
-    //json: true,
+    json: true,
     headers: {
       Accept: 'application/vnd.docker.distribution.manifest.v2+json'
     }
@@ -110,47 +110,49 @@ function getDigest(registry_url, repo, tag, next) {
     if (error) {
       next(error);
     } else {
-      //console.log(response);
-      if (response && response.headers) {
-        next(null, response.headers['docker-content-digest'] || response.headers['Docker-Content-Digest']);
+      if (body && body.errors) {
+        next(body.errors);
       } else {
-        next("digest not found");
+        next(null, response.headers['docker-content-digest'] || response.headers['Docker-Content-Digest']);
       }
     }
   });
-}
+};
+
+deleteTag = (registry_url, repo) => (digest, next) => {
+  if (!digest) return next("wrong digest: "+util.inspect(digest));
+  console.log(digest)
+  request({
+    uri: registry_url+"/v2/"+repo+"/manifests/"+digest,
+    method: "DELETE",
+    timeout: 10000,
+    followRedirect: true,
+    maxRedirects: 10,
+  }, function(error, response, body) {
+    if (error) {
+      next(error);
+    } else if(body.error) {
+      next(body.error);
+    } else {
+      next(null, {result: "success"});
+    }
+  });
+};
 
 app.get("/delete", function response(req, res) {
   let url = req.query.url;
   let repo = req.query.repo;
   let tag = req.query.tag;
   
-  getDigest(url, repo, tag, function (err, digest) {
+  let composition = async.compose(deleteTag(url, repo), getDigest(url, repo));
+  composition(tag, function(err, result){
     if (err) {
-      res.send(err);
+      res.status(500).send({error: err});
     } else {
-      console.log(url+"/v2/"+repo+"/manifests/"+digest);
-      request({
-        uri: url+"/v2/"+repo+"/manifests/"+digest,
-        method: "DELETE",
-        timeout: 10000,
-        followRedirect: true,
-        maxRedirects: 10,
-        /*
-        json: true,
-        headers: {
-          Accept: 'application/vnd.docker.distribution.manifest.v2+json'
-        }
-        */
-      }, function(error, response, body) {
-        if (error) {
-          res.send(error);
-        } else if(body.error) {
-          res.send(error);
-        } else {
-          res.send({result: "success"});
-        }
-      });
+      res.send(result);
+      // no need for sync
+      // TODO: move the command in a config file
+      exec("docker exec registry /bin/registry garbage-collect /etc/docker/registry/config.yml");
     }
   });
 });
