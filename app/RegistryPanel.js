@@ -65,7 +65,22 @@ class RegistryPanel extends React.Component {
   */
 
   handleTagDelete = (repo, tag) => () => {
-    
+    return fetch('/delete?url='+this.props.url+"&repo="+repo+"&tag="+tag)
+    .then((response) => response.json() )
+    .then((responseJson) => {
+        if (responseJson.result === "success") {
+          let changed_state = {repositories: this.state.repositories};
+          let repoi = changed_state.repositories.map(e => e.name).indexOf(repo);
+          console.log(this);
+          console.log(this.state.repositories);
+          console.log(repoi);
+          changed_state.repositories[repoi].tags = changed_state.repositories[repoi].tags.filter(item => item !== tag);
+          this.setState(changed_state);
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+      });
   };
   
   componentDidMount() {
@@ -87,7 +102,7 @@ class RegistryPanel extends React.Component {
     return (
       <div className={classes.root}>
         {repositories.map(function(repo){
-          if (repo.tags.length > 0) {
+          if (repo.tags && repo.tags.length > 0) {
             return <ExpansionPanel expanded={expanded === repo.name} onChange={this.handleChange(repo.name)}>
               <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
                 <Typography className={classes.heading}>{repo.name}</Typography>

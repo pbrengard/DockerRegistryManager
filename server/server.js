@@ -61,7 +61,6 @@ function getDetailsUrl(url) {
       if (error) {
         next(error);
       } else {
-        console.log(body);
         next(null, body);
       }
     });
@@ -88,7 +87,68 @@ app.get("/catalog", function response(req, res) {
         if (err) {
           res.send(err);
         } else {
+          console.log(results);
           res.send({repositories: results});
+        }
+      });
+    }
+  });
+});
+
+function getDigest(registry_url, repo, tag, next) {
+  request({
+    uri: registry_url+"/v2/"+repo+"/manifests/"+tag,
+    method: "GET",
+    timeout: 10000,
+    followRedirect: true,
+    maxRedirects: 10,
+    //json: true,
+    headers: {
+      Accept: 'application/vnd.docker.distribution.manifest.v2+json'
+    }
+  }, function(error, response, body) {
+    if (error) {
+      next(error);
+    } else {
+      //console.log(response);
+      if (response && response.headers) {
+        next(null, response.headers['docker-content-digest'] || response.headers['Docker-Content-Digest']);
+      } else {
+        next("digest not found");
+      }
+    }
+  });
+}
+
+app.get("/delete", function response(req, res) {
+  let url = req.query.url;
+  let repo = req.query.repo;
+  let tag = req.query.tag;
+  
+  getDigest(url, repo, tag, function (err, digest) {
+    if (err) {
+      res.send(err);
+    } else {
+      console.log(url+"/v2/"+repo+"/manifests/"+digest);
+      request({
+        uri: url+"/v2/"+repo+"/manifests/"+digest,
+        method: "DELETE",
+        timeout: 10000,
+        followRedirect: true,
+        maxRedirects: 10,
+        /*
+        json: true,
+        headers: {
+          Accept: 'application/vnd.docker.distribution.manifest.v2+json'
+        }
+        */
+      }, function(error, response, body) {
+        if (error) {
+          res.send(error);
+        } else if(body.error) {
+          res.send(error);
+        } else {
+          res.send({result: "success"});
         }
       });
     }
