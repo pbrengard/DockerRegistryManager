@@ -101,7 +101,6 @@ class ButtonAppBar extends React.Component {
      //.then((responseJson) => {
       //console.log(response);
       var stored = localStorage.getItem("DockerRegistryWebUI_registries");
-      //console.log(stored);
       var regs = JSON.parse(stored) || new Array;
       if (regs.indexOf(this.state.url_value) == -1) {
         regs.push(this.state.url_value);
@@ -113,9 +112,6 @@ class ButtonAppBar extends React.Component {
     .catch((error) => {
       console.error(error);
     });
-    //console.log(this.state.url_value);
-    //alert(this.state.url_value)
-    
   };
 
 
@@ -177,5 +173,4 @@ class ButtonAppBar extends React.Component {
 }
 
 
-//export default withStyles(styles)(InteractiveList);
 export default withStyles(styles)(ButtonAppBar);

@@ -45,25 +45,6 @@ class RegistryPanel extends React.Component {
     });
   };
 
-  /*
-  async getCatalog() {
-    //var url_v2 = this.props.url + '/v2/_catalog';
-    try {
-      let resp = await fetch('/catalog');
-      //console.log(resp);
-      if (!resp.ok) {
-        return null;
-      }
-      const {responseJ} = await resp.json();
-      console.log(responseJ);
-      return responseJ.repositories;
-    } catch (error) {
-      console.error(error);
-      return null;
-    }
-  }
-  */
-
   handleTagDelete = (repo, tag) => () => {
     return fetch('/delete?url='+this.props.url+"&repo="+repo+"&tag="+tag)
     .then((response) => response.json() )
