@@ -14,74 +14,36 @@ import Dialog, {
   DialogContentText,
   DialogTitle,
 } from 'material-ui/Dialog';
+import Menu, { MenuItem } from 'material-ui/Menu';
 
-import ListSubheader from 'material-ui/List/ListSubheader';
-import List, {
-  ListItem,
-  ListItemAvatar,
-  ListItemIcon,
-  ListItemSecondaryAction,
-  ListItemText,
-} from 'material-ui/List';
 import IconButton from 'material-ui/IconButton';
 import DeleteIcon from 'material-ui-icons/Delete';
+import DnsIcon from 'material-ui-icons/Dns';
 import AddIcon from 'material-ui-icons/Add';
 import SettingsIcon from 'material-ui-icons/Settings';
 
 import RegistryList from './RegistryList';
 
-
 const styles = theme => ({
-  root: {
+  app: {
     width: '100%',
-    maxWidth: 360,
-    background: theme.palette.background.paper,
   },
   flex: {
     flex: 1,
-  },
-  nested: {
-    paddingLeft: theme.spacing.unit * 4,
   },
   button: {
     margin: theme.spacing.unit,
   },
 });
 
-class InteractiveList extends React.Component {
-  state = {
-    dense: false,
-    secondary: false,
-  };
-
-  render() {
-    const { classes } = this.props;
-    const { dense, secondary } = this.state;
-
-    return (
-      <List className={classes.root} subheader={<ListSubheader>localhost 5000</ListSubheader>}>
-        <ListItem button>
-          <ListItemText
-            primary="Single-line item"
-          />
-          <ListItemSecondaryAction>
-            <IconButton aria-label="Delete">
-              <DeleteIcon />
-            </IconButton>
-          </ListItemSecondaryAction>
-        </ListItem>
-      </List>
-    );
-  }
-}
-
-
 class ButtonAppBar extends React.Component {
   state = {
-    //dense: false,
-    //secondary: false,
     dialog_open: false,
     url_value: "http://localhost:5000",
+    registry_menu_open: false,
+    registry_menu_anchorEl: null,
+    registries: JSON.parse(localStorage.getItem("DockerRegistryWebUI_registries")) || [],
+    selected_registry: JSON.parse(localStorage.getItem("DockerRegistryWebUI_registries")) ? JSON.parse(localStorage.getItem("DockerRegistryWebUI_registries"))[0] : null,
   };
 
   handleClickOpen = () => {
@@ -105,9 +67,9 @@ class ButtonAppBar extends React.Component {
       if (regs.indexOf(this.state.url_value) == -1) {
         regs.push(this.state.url_value);
       }
-      //console.log(JSON.stringify(regs));
       localStorage.setItem("DockerRegistryWebUI_registries", JSON.stringify(regs));
-      this.registry_list.handleStorage();
+      //this.registry_list.handleStorage();
+      this.setState({ selected_registry: this.state.url_value, registries: regs });
     })
     .catch((error) => {
       console.error(error);
@@ -115,23 +77,52 @@ class ButtonAppBar extends React.Component {
   };
 
 
+  handleOpenRegistryMenu = event => {
+    this.setState({ registry_menu_open: true, registry_menu_anchorEl: event.currentTarget });
+  };
+
+  handleCloseRegistryMenu = () => {
+    this.setState({ registry_menu_open: false });
+  };
+
+  handleSelectRegistry = (event, registry) => {
+    this.setState({ selected_registry: registry, registry_menu_open: false });
+  };
+
   render() {
     const { classes } = this.props;
-    //const { dialog_open, url_value } = this.state;
-
+    
     return (
-      <div>
+      <div className={classes.app}>
       <AppBar position="static">
         <Toolbar>
           <Typography type="title" color="inherit" className={classes.flex}>
             Docker Registry Manager
           </Typography>
+          <Button fab mini color="accent" aria-label="select" className={classes.button} onClick={this.handleOpenRegistryMenu}>
+            <DnsIcon />
+          </Button>
           <Button fab mini color="accent" aria-label="add" className={classes.button} onClick={this.handleClickOpen}>
             <AddIcon />
           </Button>
           <Button fab mini color="accent" aria-label="settings" className={classes.button}>
             <SettingsIcon />
           </Button>
+          
+          <Menu
+            id="registry-menu"
+            anchorEl={this.state.registry_menu_anchorEl}
+            open={this.state.registry_menu_open}
+            onClose={this.handleCloseRegistryMenu}
+          > 
+            {this.state.registries.map(registry => 
+              <MenuItem 
+                onClick={ event => this.handleSelectRegistry(event, registry) }
+                selected={ registry === this.state.selected_registry }>
+                  {registry}
+              </MenuItem>
+            )}
+          </Menu>
 
           <Dialog
             open={this.state.dialog_open}
@@ -166,7 +157,7 @@ class ButtonAppBar extends React.Component {
           </Dialog>
         </Toolbar>
       </AppBar>
-      <RegistryList innerRef={instance => { this.registry_list = instance; }} />
+      <RegistryList url={this.state.selected_registry} />
       </div>
     );
   }

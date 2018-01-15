@@ -1,8 +1,8 @@
 {
-  "presets": ["flow", "react", "es2017"],
+  "presets": ["react", "es2017"],
   "retainLines": true,
   "plugins": [[
-    "transform-runtime", {"polyfill": false, "regenerator": true}
+    "transform-runtime", {"helpers": true, "polyfill": false, "regenerator": true}
   ]]
 }
   

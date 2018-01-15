@@ -1,11 +1,8 @@
 /* eslint no-console: 0 */
 const http = require('https');
-const request = require("request");
+const request = require('request');
 const path = require('path');
 const express = require('express');
-const webpack = require('webpack');
-const webpackMiddleware = require('webpack-dev-middleware');
-const webpackHotMiddleware = require('webpack-hot-middleware');
 const async = require('async');
 const { exec } = require('child_process');
 const util = require('util');
@@ -14,6 +11,7 @@ const isDeveloping = process.env.NODE_ENV !== 'production';
 const port = process.env.PORT || 3000;
 const app = express();
 
+/*
 if (isDeveloping) {
   const config = require('../webpack.config.js');
   const compiler = webpack(config);
@@ -37,18 +35,47 @@ if (isDeveloping) {
     res.end();
   });
 } else {
+*/
   console.log("serving static from " + __dirname)
-  app.use(express.static('dist'));
+  app.use(express.static(path.join(__dirname, '../dist')));
   app.get('/', function response(req, res) {
     res.sendFile(path.join(__dirname, '../dist/index.html'));
   });
-}
 
 
 
+app.get("/catalog", function response(req, res) {
+  request({
+    uri: req.query.url+"/v2/_catalog",
+    method: "GET",
+    timeout: 10000,
+    followRedirect: true,
+    maxRedirects: 10,
+    json: true,
+    headers: {
+      Accept: 'application/vnd.docker.distribution.manifest.v2+json'
+    }
+  }, function(error, response, body) {
+    if (error) {
+      res.send(error);
+    } else {
+      /*
+      async.map(body.repositories, getDetails(req.query.url), function(err, results) {
+        if (err) {
+          res.send(err);
+        } else {
+          //console.log(results);
+          res.send({repositories: results});
+        }
+      });
+      */
+      res.send({ repositories: body.repositories.map( item => { return {name: item} } ) });
+    }
+  });
+});
 
 
-getDetails = (url) => (repo, next) => {
+getTags = (url, repo, next) => {
   request({
     uri: url+"/v2/"+repo+"/tags/list",
     method: "GET",
@@ -68,9 +95,10 @@ getDetails = (url) => (repo, next) => {
   });
 };
 
-app.get("/catalog", function response(req, res) {
+getTagDetails = (registry_url, repo) => (tag, next) => {
+    console.log(repo+"/"+tag)
   request({
-    uri: req.query.url+"/v2/_catalog",
+    uri: registry_url+"/v2/"+repo+"/manifests/"+tag,
     method: "GET",
     timeout: 10000,
     followRedirect: true,
@@ -81,14 +109,30 @@ app.get("/catalog", function response(req, res) {
     }
   }, function(error, response, body) {
     if (error) {
-      res.send(error);
+      next(error);
     } else {
-      async.map(body.repositories, getDetails(req.query.url), function(err, results) {
-        if (err) {
-          res.send(err);
+      let obj = {
+          name: tag,
+          digest: response.headers['docker-content-digest'] || response.headers['Docker-Content-Digest'],
+          date: response.headers['date'] || response.headers['Date']
+      }
+      next(null, obj);
+    }
+  });
+};
+
+app.get("/tags", function response(req, res) {
+  let url = req.query.url;
+  let repo = req.query.repo;
+  getTags(url, repo, function(err, tags) {
+    if (err) {
+      res.send(err);
+    } else {
+      async.map(tags.tags, getTagDetails(url, repo), function(err2, tags_results) {
+        if (err2) {
+          res.send(err2);
         } else {
-          //console.log(results);
-          res.send({repositories: results});
+          res.send({name: repo, tags: tags_results});
         }
       });
     }
@@ -110,6 +154,7 @@ getDigest = (registry_url, repo) => (tag, next) => {
     if (error) {
       next(error);
     } else {
+      
       if (body && body.errors) {
         next(body.errors);
       } else {

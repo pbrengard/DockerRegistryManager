@@ -1,11 +1,11 @@
 {
-  "name": "DockerRegistryWebUI",
-  "version": "0.1.0",
+  "name": "DockerRegistryManager",
+  "version": "0.2.0",
   "description": "A GUI on the Docker Registry",
   "main": "server.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pbrengard/DockerRegistryWebUI.git"
+    "url": "https://github.com/pbrengard/DockerRegistryManager.git"
   },
   "keywords": [
     "express",
@@ -15,9 +15,9 @@
   "author": "Pierre Brengard",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pbrengard/DockerRegistryWebUI/issues"
+    "url": "https://github.com/pbrengard/DockerRegistryManager/issues"
   },
-  "homepage": "https://github.com/pbrengard/DockerRegistryWebUI",
+  "homepage": "https://github.com/pbrengard/DockerRegistryManager",
   "scripts": {
     "test": "",
     "start": "cross-env NODE_ENV=production node server-lib/server.js",
