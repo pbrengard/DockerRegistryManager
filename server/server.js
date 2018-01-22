@@ -96,7 +96,6 @@ getTags = (url, repo, next) => {
 };
 
 getTagDetails = (registry_url, repo) => (tag, next) => {
-    console.log(repo+"/"+tag)
   request({
     uri: registry_url+"/v2/"+repo+"/manifests/"+tag,
     method: "GET",
@@ -111,12 +110,28 @@ getTagDetails = (registry_url, repo) => (tag, next) => {
     if (error) {
       next(error);
     } else {
-      let obj = {
-          name: tag,
-          digest: response.headers['docker-content-digest'] || response.headers['Docker-Content-Digest'],
-          date: response.headers['date'] || response.headers['Date']
-      }
-      next(null, obj);
+      request({
+        uri: registry_url+"/v2/"+repo+"/blobs/"+body.config.digest,
+        method: "GET",
+        timeout: 10000,
+        followRedirect: true,
+        maxRedirects: 10,
+        json: true,
+        headers: {
+          Accept: 'application/vnd.docker.distribution.manifest.v2+json'
+        }
+      }, function(error2, response2, config) {
+        if (error2) {
+          next(error2);
+        } else {
+          let obj = {
+              name: tag,
+              digest: response.headers['docker-content-digest'] || response.headers['Docker-Content-Digest'],
+              date: new Date(config.created)
+          }
+          next(null, obj);
+        }
+      });
     }
   });
 };
@@ -132,6 +147,7 @@ app.get("/tags", function response(req, res) {
         if (err2) {
           res.send(err2);
         } else {
+          tags_results.sort(function(a,b) {return a.date - b.date});
           res.send({name: repo, tags: tags_results});
         }
       });

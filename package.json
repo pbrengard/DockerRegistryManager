@@ -12,7 +12,7 @@
     "webpack",
     "node"
   ],
-  "author": "Pierre Brengard",
+  "author": "Pierre Brengard <pierre@brengard.fr>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/pbrengard/DockerRegistryManager/issues"

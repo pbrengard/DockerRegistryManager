@@ -110,7 +110,7 @@ class RegistryList extends React.Component {
                   <ListItemIcon>
                     <StorageIcon />
                   </ListItemIcon>
-                  <ListItemText inset primary={tag.name} />
+                  <ListItemText inset primary={tag.name} secondary={(new Date(tag.date)).toLocaleDateString()}/>
                   <ListItemSecondaryAction onClick={this.handleClickDelete(repository.name, tag.name)}>
                       <IconButton aria-label="Delete">
                         <DeleteIcon />
